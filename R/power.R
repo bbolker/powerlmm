@@ -1027,7 +1027,14 @@ get_se_classic <- function(object) {
 
     n1 <- object$n1
     T_end <- object$T_end
-    sx <- Vectorize(var_T)(n1, T_end)
+
+    if(n1 > 1) {
+        sx <- Vectorize(var_T)(n1, T_end)
+    } else {
+        # cross sectional model
+        sx <- 1
+    }
+
 
 
 
