@@ -5,28 +5,29 @@ library(parallel)
 library(powerlmm)
 
 p <- study_parameters(n1 = 11,
-                       n2 = 100,
-                       n3 = 10,
-                       icc_pre_subject = 0.7,
+                       n2 = 10,
+                       n3 = 4,
+                       icc_pre_subject = 0.6,
                        icc_pre_cluster = 0.1,
                        cor_cluster = 0,
                        cor_subject = -0.4,
                        var_ratio = 0.03,
                        icc_slope = 0.05,
                        sigma_error = 30,
-                       effect_size = cohend(0.5))
+                       effect_size = 0)
 
 sim_posttest <- function(i, p) {
     d <- simulate_data(p)
 
     d_post <- d[d$time == 10, ]
     d_post$pre <-  d[d$time == 0, "y"]
-    d_post$pre <- d_post$pre - mean(d_post$pre)
+
     d_post <- d_post %>%
         group_by(cluster) %>%
         mutate(pre_cluster = mean(pre))
+    d_post$pre <- d_post$pre - d_post$pre_cluster
 
-    fit_post <- lmer(y ~ treatment + pre + pre_cluster +  (1 | cluster), data = d_post)
+    fit_post <- lmer(y ~ treatment  + (1 | cluster), data = d_post)
     x <- summary(fit_post)
 
     vv <- as.data.frame(VarCorr(fit_post))
@@ -64,8 +65,8 @@ res %>% summarise(mean(est),
                   mean(sigma2_error))
 
 get_posttest_power(p)
-convert(p)
-
+convert(p, adjust_pre = TRUE)
+get_autocor(p)
 
 ## Work okay when ICC_pre_cluster = 0
 
