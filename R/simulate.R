@@ -1500,10 +1500,11 @@ summary.plcp_sim_formula_compare <- function(object, model = NULL, alpha = 0.05,
                              para = para,
                              ...)
         }
-    } else if(model_selection %in% c("FW", "BW")) {
+    } else if(model_selection %in% c("FW", "BW", "p-hack")) {
         x <- do_model_selection(object,
                                 direction = model_selection,
-                                alpha = LRT_alpha)
+                                alpha = LRT_alpha,
+                                para = para)
         summary.plcp_sim(x,
                          alpha = alpha,
                          para = para,

@@ -92,7 +92,27 @@ step_bw.plcp_sim <- function(models, alpha = 0.1) {
     res0
 }
 
+## p-hacking
+p_hack.plcp_sim <- function(object, para) {
 
+    tmp <- vector("list", length(object$res))
+    names(tmp) <- names(object$res)
+    for(i in seq_along(tmp)) {
+        d <- object$res[[i]]$FE
+        test <- para[[names(tmp)[i]]]
+        tmp[[i]] <- d[d$parameter == test, ]
+        tmp[[i]]$model <- names(tmp)[[i]]
+    }
+
+    tmp <- do.call(rbind, tmp)
+    out <- vector("list", object$nsim)
+    for(i in 1:object$nsim) {
+        d <- tmp[tmp$sim == i, ]
+        out[[i]] <- d[which.min(d$pval), ]
+
+    }
+    do.call(rbind, out)
+}
 # Update object -----------------------------------------------------------
 
 
@@ -105,12 +125,14 @@ get_sim_para <- function(i, effect, object, mod) {
     x
 }
 
-do_model_selection <- function(object, direction = "FW", alpha = 0.1) {
+do_model_selection <- function(object, direction = "FW", alpha = 0.1, para = NULL) {
     models <- prepare_LRT_models(object)
     if(direction == "FW") {
         winners <- step_fw.plcp_sim(models, alpha = alpha)
     } else if(direction == "BW") {
         winners <- step_bw.plcp_sim(models, alpha = alpha)
+    } else if(direction == "p-hack") {
+        p_hack.plcp_sim(object, tests)
     }
 
     nsim <- object$nsim
