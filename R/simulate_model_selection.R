@@ -111,7 +111,10 @@ p_hack.plcp_sim <- function(object, para) {
         out[[i]] <- d[which.min(d$pval), ]
 
     }
-    do.call(rbind, out)
+    x <- do.call(rbind, out)
+    x$parameter <- "p-hack"
+    x
+
 }
 # Update object -----------------------------------------------------------
 
@@ -131,27 +134,35 @@ do_model_selection <- function(object, direction = "FW", alpha = 0.1, para = NUL
         winners <- step_fw.plcp_sim(models, alpha = alpha)
     } else if(direction == "BW") {
         winners <- step_bw.plcp_sim(models, alpha = alpha)
-    } else if(direction == "p-hack") {
-        p_hack.plcp_sim(object, tests)
     }
 
     nsim <- object$nsim
 
-    # skeleton
-    x <- list("RE" = vector("list", nsim),
-              "FE" = vector("list", nsim),
-              "tot_n" = vector("numeric", nsim),
-              "convergence" = vector("numeric", nsim))
+    if(direction %in% c("FW", "BW")) {   # skeleton
+        x <- list("RE" = vector("list", nsim),
+                  "FE" = vector("list", nsim),
+                  "tot_n" = vector("numeric", nsim),
+                  "convergence" = vector("numeric", nsim))
 
-    for(i in seq_along(winners)) {
-        mod <- winners[i]
-        x$RE[[i]] <- get_sim_para(i, "RE", object, mod)
-        x$FE[[i]] <- get_sim_para(i, "FE", object, mod)
-        x$tot_n[i] <- object$res[[mod]][["tot_n"]][i]
-        x$convergence[i] <- object$res[[mod]][["convergence"]][i]
+        for(i in seq_along(winners)) {
+            mod <- winners[i]
+            x$RE[[i]] <- get_sim_para(i, "RE", object, mod)
+            x$FE[[i]] <- get_sim_para(i, "FE", object, mod)
+            x$tot_n[i] <- object$res[[mod]][["tot_n"]][i]
+            x$convergence[i] <- object$res[[mod]][["convergence"]][i]
+        }
+        x$RE <- do.call(rbind, x$RE)
+        x$FE <- do.call(rbind, x$FE)
+    } else if(direction == "p-hack") {
+        x <- p_hack.plcp_sim(object, para = para)
+        winners <- x$model
+        x <- list("RE" = data.frame(grp = numeric(), var1 = numeric(), var2 = numeric(), vcov = numeric(), parameter = numeric(), sim = numeric()),
+                  "FE" = x,
+                  "tot_n" = object$res[[1]]$tot_n,
+                  "convergence" = NA)
+
     }
-    x$RE <- do.call(rbind, x$RE)
-    x$FE <- do.call(rbind, x$FE)
+
 
     object$res <- list("model_selection" = x)
     object$model_selected <- table(winners,

@@ -1166,6 +1166,7 @@ munge_results_ <- function(model, res, effect) {
             tmp <- effect[ , colnames(effect) %in% c("parameter", "model"), drop = FALSE]
         }
         effect <- effect[, !colnames(effect) %in% c("parameter", "model"), drop = FALSE]
+        effect$theta <- as.numeric(effect$theta)
         effect <- signif(effect, digits)
         effect <- cbind(tmp, effect)
         effect[t(do.call(rbind, lapply(effect, is.nan)))] <- "."
@@ -1270,8 +1271,13 @@ print.plcp_sim_summary <- function(x, verbose = TRUE, digits = 2, ...) {
         cat("\nTotal number of subjects: ", tot_n, "\n")
         lapply(seq_along(x), print_test_NA, x = x)
         if("model_selected" %in% names(res)) {
-            cat("---\nResults based on LRT model comparisons, using direction: ",
-                res$model_direction, " (alpha = ", res$LRT_alpha, ")\n", sep = "")
+            if(res$model_direction %in% c("FW", "BW")) {
+                cat("---\nResults based on LRT model comparisons, using direction: ",
+                    res$model_direction, " (alpha = ", res$LRT_alpha, ")\n", sep = "")
+            } else if(res$model_direction == "p-hack") {
+                cat("---\nResults based on p-hacking\n")
+            }
+
             print(res$model_selected)
         }
         data_bool <- vapply(res$formula, function(x) is.function(x$data_transform), logical(1))
@@ -1505,6 +1511,7 @@ summary.plcp_sim_formula_compare <- function(object, model = NULL, alpha = 0.05,
                                 direction = model_selection,
                                 alpha = LRT_alpha,
                                 para = para)
+        if(model_selection == "p-hack") para <- "p-hack"
         summary.plcp_sim(x,
                          alpha = alpha,
                          para = para,
@@ -1517,29 +1524,41 @@ summary.plcp_sim_formula_compare <- function(object, model = NULL, alpha = 0.05,
 
 summarize_RE <- function(res, theta) {
     d <- res$RE
-    parms <- unique(d$parameter)
-    tmp <- vector("list", length(parms))
-    for(i in seq_along(parms)) {
-        para <- parms[[i]]
-        vcov <- d[d$parameter == para, "vcov"]
-        theta_i <- theta[theta$parameter == para, "theta"]
-        theta_i[is.na(theta_i)] <- 0 # for when para is NA
-        if(length(theta_i) == 0) theta_i <- 0 # for when para does not exist
-        est <- mean(vcov, na.rm=TRUE)
-        res <- data.frame(
-            parameter = para,
-            M_est = est,
-            theta = theta_i,
-            est_rel_bias = get_RB(est, theta_i),
-            prop_zero = mean(is_approx(vcov, 0), na.rm=TRUE),
-            is_NA = mean(is.na(vcov))
-        )
-        if (para %in% c("cor_subject", "cor_cluster")) {
-            res$prop_zero <- mean(is_approx(abs(vcov), 1), na.rm=TRUE)
+    if(!all(is.na(d))) {
+        parms <- unique(d$parameter)
+        tmp <- vector("list", length(parms))
+        for(i in seq_along(parms)) {
+            para <- parms[[i]]
+            vcov <- d[d$parameter == para, "vcov"]
+            theta_i <- theta[theta$parameter == para, "theta"]
+            theta_i[is.na(theta_i)] <- 0 # for when para is NA
+            if(length(theta_i) == 0) theta_i <- 0 # for when para does not exist
+            est <- mean(vcov, na.rm=TRUE)
+            res <- data.frame(
+                parameter = para,
+                M_est = est,
+                theta = theta_i,
+                est_rel_bias = get_RB(est, theta_i),
+                prop_zero = mean(is_approx(vcov, 0), na.rm=TRUE),
+                is_NA = mean(is.na(vcov))
+            )
+            if (para %in% c("cor_subject", "cor_cluster")) {
+                res$prop_zero <- mean(is_approx(abs(vcov), 1), na.rm=TRUE)
+            }
+            tmp[[i]] <- res
         }
-        tmp[[i]] <- res
+        RE <- do.call(rbind, tmp)
+    } else {
+        RE <- data.frame(
+            parameter = numeric(),
+            M_est = numeric(),
+            theta = numeric(),
+            est_rel_bias = numeric(),
+            prop_zero = numeric(),
+            is_NA = numeric()
+        )
     }
-    RE <- do.call(rbind, tmp)
+
 
     RE
 }

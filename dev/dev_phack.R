@@ -5,6 +5,7 @@ p <- study_parameters(n1 = 11,
                       icc_pre_subject = 0.5,
                       cor_subject = -0.4,
                       var_ratio = c(0.02),
+                      dropout = dropout_weibull(0.3, 1),
                       effect_size = 0)
 
 transform_to_pre <- function(data) {
@@ -55,17 +56,6 @@ f_LMM <- sim_formula("y ~ time * treatment +
 f_LMM_c <- sim_formula("y ~ time + time:treatment +
                          (1 + time | subject)")
 
-f_LMM_pre <- sim_formula("y ~ pretest + time * treatment +
-                         (1 + time | subject)",
-                         test = c("time:treatment"),
-                         data_transform = transform_to_pre)
-
-
-f_LMM_pre2 <- sim_formula("y ~ pretest + pretest:time + time * treatment +
-                         (1 + time | subject)",
-                          test = c("time:treatment"),
-                          data_transform = transform_to_pre)
-
 
 # combine formulas
 f <- sim_formula_compare("posttest" = f_PT,
@@ -73,9 +63,7 @@ f <- sim_formula_compare("posttest" = f_PT,
                          "diff" = f_diff,
                          "diff_pre" = f_diff_pre,
                          "LMM" = f_LMM,
-                         "LMM_c" = f_LMM_c,
-                         "LMM_pre" = f_LMM_pre,
-                         "LMM_pre2" = f_LMM_pre2)
+                         "LMM_c" = f_LMM_c)
 
 
 
@@ -93,17 +81,25 @@ tests <-  list("posttest" = "treatment",
                "diff" = "treatment",
                "diff_pre" = "treatment",
                "LMM" = "time:treatment",
-               "LMM_c" = "time:treatment",
-               "LMM_pre" = "time:treatment",
-               "LMM_pre2" = "time:treatment")
+               "LMM_c" = "time:treatment")
 
 summary(res, para = tests)
 
-mean(p_hack.plcp_sim(res, para = tests)$pval < 0.05)
+x <- p_hack.plcp_sim(res, para = tests)
 
+mean(x$pval < 0.05)
 
 x <- lapply(res, function(x) { mean(p_hack.plcp_sim(x, para = tests)$pval < 0.05)})
 x
 
 mean(x$pval < 0.05)
 mean(x$estimate)
+
+
+##
+
+summary(res, model_selection = "p-hack", para = tests)
+
+# should throw error
+summary(res, model_selection = "p-hack")
+
