@@ -85,21 +85,38 @@ tests <-  list("posttest" = "treatment",
 
 summary(res, para = tests)
 
-x <- p_hack.plcp_sim(res, para = tests)
-
-mean(x$pval < 0.05)
-
-x <- lapply(res, function(x) { mean(p_hack.plcp_sim(x, para = tests)$pval < 0.05)})
-x
-
-mean(x$pval < 0.05)
-mean(x$estimate)
-
-
-##
 
 summary(res, model_selection = "p-hack", para = tests)
 
 # should throw error
 summary(res, model_selection = "p-hack")
 
+
+
+###
+
+# combine formulas
+f2 <- sim_formula_compare("posttest" = f_PT,
+                         "ANCOVA" = f_PT_pre,
+                         "diff" = f_diff)
+
+
+
+# Run sim --------------------------------------------------------------------
+res2 <- simulate(p,
+                formula = f2,
+                nsim = 1000,
+                cores = 16,
+                satterthwaite = FALSE,
+                batch_progress = FALSE)
+
+# need to specify what parameter estimates the treatment effect.
+summary(res, model_selection = "p-hack", para = "treatment")
+
+#should  give error
+summary(res, model_selection = "p-hack", para =  list("posttest" = "treatment",
+                                                      "ANCOVA" = "treatment",
+                                                      "diff" = "treatment"))
+
+
+## TODO: LMMs are ignored if not Satterth dfs used

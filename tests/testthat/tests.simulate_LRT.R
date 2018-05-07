@@ -146,4 +146,76 @@ test_that("LRT calcs", {
 })
 
 
+test_that("p-hack", {
+
+    p <- study_parameters(n1 = 3,
+                          n2 = 10, # per treatment
+                          icc_pre_subject = 0.5,
+                          cor_subject = -0.4,
+                          var_ratio = 0.02,
+                          effect_size = 0)
+
+
+
+    # Formulas --------------------------------------------------------------------
+    # OLS (t-test)
+    f_PT <- sim_formula("y ~ treatment",
+                        test = "treatment",
+                        data_transform = transform_to_posttest)
+
+
+    # diff score
+    f_PT_pre <- sim_formula("y ~ treatment + pretest",
+                              test = "treatment",
+                              data_transform = transform_to_posttest)
+
+    # analyze as 2-level longitudinal
+    f_LMM <- sim_formula("y ~ time * treatment +
+                         (1 + time | subject)")
+
+
+
+    # combine formulas
+    f <- sim_formula_compare("posttest" = f_PT,
+                             "ANCOVA" = f_PT_pre,
+                             "LMM" = f_LMM)
+
+
+
+    # Run sim --------------------------------------------------------------------
+    res <- simulate(p,
+                    formula = f,
+                    nsim = 2,
+                    cores = 1,
+                    satterthwaite = FALSE,
+                    batch_progress = FALSE)
+
+    # need to specify what parameter estimates the treatment effect.
+    tests <-  list("posttest" = "treatment",
+                   "ANCOVA" = "treatment",
+                   "LMM" = "time:treatment")
+
+    summary(res, para = tests)
+
+
+    summary(res, model_selection = "p-hack", para = tests)
+
+    # should throw error
+    expect_error(summary(res, model_selection = "p-hack"), "'para' can't be NULL.")
+    expect_error(summary(res, model_selection = "p-hack", para = "treatment1"), "No 'para': treatment1, in model: posttest")
+    expect_error(summary(res, model_selection = "p-hack", para = list("posttest"= "treatment")), "When 'para' is a list it must contain a parameter name for each model.")
+    expect_error(summary(res, model_selection = "p-hack", para = list("posttest"= "treatment",
+                                                                      "ANCOVA"= "treatment",
+                                                                      "LMM"= "treatment1")), "No 'para': treatment1, in model: LMM")
+
+
+    x <- summary(res, model_selection = "p-hack", para = list("posttest"= "treatment",
+                                                         "ANCOVA"= "treatment",
+                                                         "LMM"= "time:treatment"))
+    expect_output(print(x), "Fixed effects: 'p-hack'")
+    expect_output(print(x), "model M_est")
+    expect_output(print(x), "Results based on p-hacking")
+})
+
+
 

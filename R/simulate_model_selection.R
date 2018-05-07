@@ -95,12 +95,17 @@ step_bw.plcp_sim <- function(models, alpha = 0.1) {
 ## p-hacking
 p_hack.plcp_sim <- function(object, para) {
 
+    if(is.null(para)) stop("'para' can't be NULL.", call. = FALSE)
     tmp <- vector("list", length(object$res))
     names(tmp) <- names(object$res)
+    if(is.list(para) & length(para) != length(tmp)) stop("When 'para' is a list it must contain a parameter name for each model.", call. = FALSE)
     for(i in seq_along(tmp)) {
         d <- object$res[[i]]$FE
-        test <- para[[names(tmp)[i]]]
-        tmp[[i]] <- d[d$parameter == test, ]
+
+        if(is.list(para)) pp <- para[[names(tmp)[i]]] else pp <- para
+
+        if(!pp %in% unique(d$parameter)) stop("No 'para': ", pp, ", in model: ", names(tmp)[i], call. = FALSE)
+        tmp[[i]] <- d[d$parameter == pp, ]
         tmp[[i]]$model <- names(tmp)[[i]]
     }
 
