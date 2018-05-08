@@ -1845,7 +1845,8 @@ summary.plcp_multi_sim <- function(object,
         for(i in seq_along(res)) {
             res[[i]] <- do_model_selection(res[[i]],
                                            direction = model_selection,
-                                           alpha = LRT_alpha)
+                                           alpha = LRT_alpha,
+                                           para = para)
             model <- "model_selection"
         }
     }
@@ -1857,6 +1858,10 @@ summary.plcp_multi_sim <- function(object,
     if(!is.null(model)) {
         RE_names <- RE_names[[model]]
         FE_names <- FE_names[[model]]
+        if(!is.null(model_selection) && model_selection == "p-hack") {
+            para <- "p-hack"
+            mod_n <- 1
+        }
     }
 
     if(length(para) == 1 && is.character(para)) {

@@ -113,6 +113,12 @@ p_hack.plcp_sim <- function(object, para) {
     out <- vector("list", object$nsim)
     for(i in 1:object$nsim) {
         d <- tmp[tmp$sim == i, ]
+
+        # need p-values if Satterthwaite == FALSE
+        # use BW dfs
+        d$pval <- ifelse(is.na(d$pval),
+                    2*(1 - pt(abs(d$estimate/d$se),
+                              df = d$df_bw)), d$pval)
         out[[i]] <- d[which.min(d$pval), ]
 
     }

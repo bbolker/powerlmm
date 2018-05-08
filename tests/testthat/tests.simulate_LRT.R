@@ -149,7 +149,7 @@ test_that("LRT calcs", {
 test_that("p-hack", {
 
     p <- study_parameters(n1 = 3,
-                          n2 = 10, # per treatment
+                          n2 = 10:11, # per treatment
                           icc_pre_subject = 0.5,
                           cor_subject = -0.4,
                           var_ratio = 0.02,
@@ -195,13 +195,9 @@ test_that("p-hack", {
                    "ANCOVA" = "treatment",
                    "LMM" = "time:treatment")
 
-    summary(res, para = tests)
-
-
-    summary(res, model_selection = "p-hack", para = tests)
 
     # should throw error
-    expect_error(summary(res, model_selection = "p-hack"), "'para' can't be NULL.")
+    expect_error(summary(res[[1]], model_selection = "p-hack"), "'para' can't be NULL.")
     expect_error(summary(res, model_selection = "p-hack", para = "treatment1"), "No 'para': treatment1, in model: posttest")
     expect_error(summary(res, model_selection = "p-hack", para = list("posttest"= "treatment")), "When 'para' is a list it must contain a parameter name for each model.")
     expect_error(summary(res, model_selection = "p-hack", para = list("posttest"= "treatment",
@@ -209,12 +205,22 @@ test_that("p-hack", {
                                                                       "LMM"= "treatment1")), "No 'para': treatment1, in model: LMM")
 
 
-    x <- summary(res, model_selection = "p-hack", para = list("posttest"= "treatment",
+    x <- summary(res[[1]], model_selection = "p-hack", para = list("posttest"= "treatment",
                                                          "ANCOVA"= "treatment",
                                                          "LMM"= "time:treatment"))
     expect_output(print(x), "Fixed effects: 'p-hack'")
     expect_output(print(x), "model M_est")
     expect_output(print(x), "Results based on p-hacking")
+
+    # print multi
+    x <- summary(res, model_selection = "p-hack", para = list("posttest"= "treatment",
+                                                                   "ANCOVA"= "treatment",
+                                                                   "LMM"= "time:treatment"))
+    expect_equal(nrow(x), 2)
+    expect_output(print(x), "Model: 'model_selection' \\| Type: 'fixed' \\| Parameter\\(s\\): 'p-hack'")
+    expect_output(print(x), "M_est theta M_se")
+    expect_output(print(x), "nsim:  2")
+
 })
 
 
